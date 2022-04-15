@@ -1,6 +1,6 @@
 <template>
     <div class="client-component">
-        <div class="align-right mb-0_5rem">
+        <div class="align-right mb-0_5rem mr-0_5rem mt-0_5rem">
             <button @click="addClient">Add Client</button>
         </div>
         <div class="clients">
