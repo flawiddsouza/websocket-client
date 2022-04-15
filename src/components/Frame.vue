@@ -10,7 +10,7 @@
                         type="text"
                         v-model="client.url"
                         class="w-100p"
-                        :disabled="client.ws"
+                        :disabled="client.ws ? true : false"
                     />
                     <div class="ml-0_5rem">
                         <button @click="connect(client)" v-if="client.ws === null">
@@ -78,7 +78,7 @@
                 </div>
 
                 <div class="oy-a">
-                    <table :ref="'messagesContainer-' + client.id">
+                    <table :ref="(element) => handleMessageContainerRef(element, client.id)">
                         <tbody>
                             <tr
                                 v-for="message in client.messages"
@@ -144,124 +144,146 @@
     </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import { nanoid } from 'nanoid'
 import dayjs from 'dayjs'
-import { nextTick } from 'vue'
+import { Ref, ref, watch, nextTick, onBeforeMount, reactive } from 'vue'
 
-export default {
-    data() {
-        return {
-            clients: [
-                {
-                    id: nanoid(),
-                    url: '',
-                    message: '',
-                    messages: [],
-                    ws: null
-                }
-            ]
-        }
-    },
-    watch: {
-        clients: {
-            deep: true,
-            handler() {
-                localStorage.setItem(
-                    'Websocket-Client-Clients',
-                    JSON.stringify(
-                        this.clients.map((item) => ({
-                            ...item,
-                            ws: null
-                        }))
-                    )
-                )
-            }
-        }
-    },
-    methods: {
-        addClient() {
-            this.clients.push({
-                id: nanoid(),
-                url: '',
-                message: '',
-                messages: [],
-                ws: null
-            })
-        },
-        removeClient(client) {
-            if (!confirm('Are you sure you want to remove this client?')) {
-                return
-            }
-            if (client.ws) {
-                ws.close()
-            }
-            this.clients = this.clients.filter(
-                (clientItem) => clientItem.id !== client.id
-            )
-        },
-        connect(client) {
-            if (client.url === '') {
-                return
-            }
-            client.ws = new WebSocket(client.url)
-            client.ws.addEventListener('message', (e) => {
-                client.messages.push({
-                    timestamp: new Date().getTime(),
-                    message: e.data,
-                    type: 'RECEIVE'
-                })
-                this.scrollToBottomClientMessages(client.id)
-            })
-        },
-        sendMessage(client) {
-            if (client.message === '') {
-                return
-            }
-            client.ws.send(client.message)
-            client.messages.push({
-                timestamp: new Date().getTime(),
-                message: client.message,
-                type: 'SEND'
-            })
-            this.scrollToBottomClientMessages(client.id)
-        },
-        clearMessages(client) {
-            client.messages = []
-        },
-        disconnect(client) {
-            client.ws.close()
-            client.ws = null
-        },
-        formatTimestamp(epoch: number) {
-            return dayjs(epoch).format('YYYY-MM-DD hh:mm A')
-        },
-        parseAndFormatMessage(message: string) {
-            let parsedMessage = null
-            try {
-                parsedMessage = JSON.stringify(JSON.parse(message), null, 4)
-            } catch {}
-            if (parsedMessage) {
-                return parsedMessage
-            }
-            return message
-        },
-        scrollToBottomClientMessages(clientId, smooth=true) {
-            nextTick(() => {
-                this.$refs[`messagesContainer-${clientId}`][0].scrollIntoView({ behavior: smooth ? 'smooth': 'auto', block: 'end' })
-            })
-        }
-    },
-    created() {
-        const savedClients = localStorage.getItem('Websocket-Client-Clients')
-        if (savedClients) {
-            this.clients = JSON.parse(savedClients)
-            this.clients.forEach(client => {
-                this.scrollToBottomClientMessages(client.id, false)
-            })
-        }
-    }
+const messageContainerRefs: any = reactive({})
+
+function handleMessageContainerRef(ref: any, clientId: string) {
+    messageContainerRefs[clientId] = ref
 }
+
+interface ClientMessage {
+    timestamp: number,
+    message: string,
+    type: 'SEND' | 'RECEIVE'
+}
+
+interface Client {
+    id: string,
+    url: string,
+    message: string,
+    messages: ClientMessage[],
+    ws: WebSocket | null
+}
+
+const initialClients: Client[] = [
+    {
+        id: nanoid(),
+        url: '',
+        message: '',
+        messages: [],
+        ws: null
+    }
+]
+
+const clients: Ref<Client[]> = ref(initialClients);
+
+function addClient() {
+    clients.value.push({
+        id: nanoid(),
+        url: '',
+        message: '',
+        messages: [],
+        ws: null
+    })
+}
+
+function removeClient(client: Client) {
+    if (!confirm('Are you sure you want to remove this client?')) {
+        return
+    }
+    client.ws?.close()
+    clients.value = clients.value.filter(
+        (clientItem) => clientItem.id !== client.id
+    )
+}
+
+function connect(client: Client) {
+    if (client.url === '') {
+        return
+    }
+    client.ws = new WebSocket(client.url)
+    client.ws.addEventListener('message', (e) => {
+        client.messages.push({
+            timestamp: new Date().getTime(),
+            message: e.data,
+            type: 'RECEIVE'
+        })
+        scrollToBottomClientMessages(client.id)
+    })
+}
+
+function sendMessage(client: Client) {
+    if (client.message === '') {
+        return
+    }
+    client.ws?.send(client.message)
+    client.messages.push({
+        timestamp: new Date().getTime(),
+        message: client.message,
+        type: 'SEND'
+    })
+    scrollToBottomClientMessages(client.id)
+}
+
+function clearMessages(client: Client) {
+    client.messages = []
+}
+
+function disconnect(client: Client) {
+    client.ws?.close()
+    client.ws = null
+}
+
+function formatTimestamp(epoch: number) {
+    return dayjs(epoch).format('YYYY-MM-DD hh:mm A')
+}
+
+function parseAndFormatMessage(message: string) {
+    let parsedMessage = null
+    try {
+        parsedMessage = JSON.stringify(JSON.parse(message), null, 4)
+    } catch {}
+    if (parsedMessage) {
+        return parsedMessage
+    }
+    return message
+}
+
+function scrollToBottomClientMessages(clientId: string, smooth=true) {
+    nextTick(() => {
+        messageContainerRefs[clientId].scrollIntoView({ behavior: smooth ? 'smooth': 'auto', block: 'end' })
+    })
+}
+
+watch(
+    () => clients,
+    () => {
+        localStorage.setItem(
+            'Websocket-Client-Clients',
+            JSON.stringify(
+                clients.value.map((item) => ({
+                    ...item,
+                    ws: null
+                }))
+            )
+        )
+    },
+    { deep: true }
+)
+
+onBeforeMount(() => {
+    const savedClients = localStorage.getItem('Websocket-Client-Clients')
+    if (savedClients) {
+        clients.value = JSON.parse(savedClients)
+        clients.value.forEach(client => {
+            scrollToBottomClientMessages(client.id, false)
+        })
+    }
+})
 </script>
 
 <style scoped>
