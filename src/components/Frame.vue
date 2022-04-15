@@ -77,8 +77,8 @@
                     </div>
                 </div>
 
-                <div class="mt-0_5rem oy-a">
-                    <table>
+                <div class="oy-a">
+                    <table :ref="'messagesContainer-' + client.id">
                         <tbody>
                             <tr
                                 v-for="message in client.messages"
@@ -147,6 +147,7 @@
 <script lang="ts">
 import { nanoid } from 'nanoid'
 import dayjs from 'dayjs'
+import { nextTick } from 'vue'
 
 export default {
     data() {
@@ -210,6 +211,7 @@ export default {
                     message: e.data,
                     type: 'RECEIVE'
                 })
+                this.scrollToBottomClientMessages(client.id)
             })
         },
         sendMessage(client) {
@@ -222,6 +224,7 @@ export default {
                 message: client.message,
                 type: 'SEND'
             })
+            this.scrollToBottomClientMessages(client.id)
         },
         clearMessages(client) {
             client.messages = []
@@ -230,10 +233,10 @@ export default {
             client.ws.close()
             client.ws = null
         },
-        formatTimestamp(epoch) {
+        formatTimestamp(epoch: number) {
             return dayjs(epoch).format('YYYY-MM-DD hh:mm A')
         },
-        parseAndFormatMessage(message) {
+        parseAndFormatMessage(message: string) {
             let parsedMessage = null
             try {
                 parsedMessage = JSON.stringify(JSON.parse(message), null, 4)
@@ -242,12 +245,20 @@ export default {
                 return parsedMessage
             }
             return message
+        },
+        scrollToBottomClientMessages(clientId, smooth=true) {
+            nextTick(() => {
+                this.$refs[`messagesContainer-${clientId}`][0].scrollIntoView({ behavior: smooth ? 'smooth': 'auto', block: 'end' })
+            })
         }
     },
     created() {
         const savedClients = localStorage.getItem('Websocket-Client-Clients')
         if (savedClients) {
             this.clients = JSON.parse(savedClients)
+            this.clients.forEach(client => {
+                this.scrollToBottomClientMessages(client.id, false)
+            })
         }
     }
 }
