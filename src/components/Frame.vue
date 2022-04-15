@@ -13,7 +13,10 @@
                         :disabled="client.ws ? true : false"
                     />
                     <div class="ml-0_5rem">
-                        <button @click="connect(client)" v-if="client.ws === null">
+                        <button
+                            @click="connect(client)"
+                            v-if="client.ws === null"
+                        >
                             Connect
                         </button>
                         <button @click="disconnect(client)" v-else>
@@ -78,7 +81,12 @@
                 </div>
 
                 <div class="oy-a">
-                    <table :ref="(element) => handleMessageContainerRef(element, client.id)">
+                    <table
+                        :ref="
+                            (element) =>
+                                handleMessageContainerRef(element, client.id)
+                        "
+                    >
                         <tbody>
                             <tr
                                 v-for="message in client.messages"
@@ -156,16 +164,16 @@ function handleMessageContainerRef(ref: any, clientId: string) {
 }
 
 interface ClientMessage {
-    timestamp: number,
-    message: string,
+    timestamp: number
+    message: string
     type: 'SEND' | 'RECEIVE'
 }
 
 interface Client {
-    id: string,
-    url: string,
-    message: string,
-    messages: ClientMessage[],
+    id: string
+    url: string
+    message: string
+    messages: ClientMessage[]
     ws: WebSocket | null
 }
 
@@ -179,7 +187,7 @@ const initialClients: Client[] = [
     }
 ]
 
-const clients: Ref<Client[]> = ref(initialClients);
+const clients: Ref<Client[]> = ref(initialClients)
 
 function addClient() {
     clients.value.push({
@@ -253,9 +261,12 @@ function parseAndFormatMessage(message: string) {
     return message
 }
 
-function scrollToBottomClientMessages(clientId: string, smooth=true) {
+function scrollToBottomClientMessages(clientId: string, smooth = true) {
     nextTick(() => {
-        messageContainerRefs[clientId].scrollIntoView({ behavior: smooth ? 'smooth': 'auto', block: 'end' })
+        messageContainerRefs[clientId].scrollIntoView({
+            behavior: smooth ? 'smooth' : 'auto',
+            block: 'end'
+        })
     })
 }
 
@@ -279,7 +290,7 @@ onBeforeMount(() => {
     const savedClients = localStorage.getItem('Websocket-Client-Clients')
     if (savedClients) {
         clients.value = JSON.parse(savedClients)
-        clients.value.forEach(client => {
+        clients.value.forEach((client) => {
             scrollToBottomClientMessages(client.id, false)
         })
     }
