@@ -1,0 +1,54 @@
+<head>
+    <title>Websocket Client</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlInput = document.getElementById("url");
+            const connectButton = document.getElementById("connect");
+            const messageInput = document.getElementById("message");
+            const sendButton = document.getElementById("send");
+            const messagesContainer = document.getElementById("messages");
+
+            let ws = null;
+
+            connectButton.addEventListener("click", (e) => {
+                if (connectButton.innerText === "Connect") {
+                    ws = new WebSocket(urlInput.value);
+                    ws.addEventListener("message", (e) => {
+                        const message = document.createElement("div");
+                        message.innerText = e.data;
+                        messagesContainer.appendChild(message);
+                    });
+                    connectButton.innerText = "Disconnect";
+                } else {
+                    ws.close();
+                    connectButton.innerText = "Connect";
+                }
+            });
+
+            sendButton.addEventListener("click", (e) => {
+                ws.send(messageInput.value);
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div>
+        <label>
+            Url<br />
+            <input type="text" id="url" />
+        </label>
+        <button id="connect">Connect</button>
+    </div>
+
+    <div>
+        <label>
+            Message<br />
+            <textarea id="message"></textarea>
+        </label>
+        <br />
+        <button id="send">Send</button>
+    </div>
+
+    <div id="messages"></div>
+</body>
