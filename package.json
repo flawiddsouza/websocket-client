@@ -5,9 +5,11 @@
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc --noEmit && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "format": "npx prettier --write ."
     },
     "dependencies": {
+        "dayjs": "^1.11.1",
         "nanoid": "^3.3.2",
         "vue": "^3.2.25"
     },

@@ -1,34 +1,34 @@
 <head>
     <title>Websocket Client</title>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const urlInput = document.getElementById("url");
-            const connectButton = document.getElementById("connect");
-            const messageInput = document.getElementById("message");
-            const sendButton = document.getElementById("send");
-            const messagesContainer = document.getElementById("messages");
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlInput = document.getElementById('url')
+            const connectButton = document.getElementById('connect')
+            const messageInput = document.getElementById('message')
+            const sendButton = document.getElementById('send')
+            const messagesContainer = document.getElementById('messages')
 
-            let ws = null;
+            let ws = null
 
-            connectButton.addEventListener("click", (e) => {
-                if (connectButton.innerText === "Connect") {
-                    ws = new WebSocket(urlInput.value);
-                    ws.addEventListener("message", (e) => {
-                        const message = document.createElement("div");
-                        message.innerText = e.data;
-                        messagesContainer.appendChild(message);
-                    });
-                    connectButton.innerText = "Disconnect";
+            connectButton.addEventListener('click', (e) => {
+                if (connectButton.innerText === 'Connect') {
+                    ws = new WebSocket(urlInput.value)
+                    ws.addEventListener('message', (e) => {
+                        const message = document.createElement('div')
+                        message.innerText = e.data
+                        messagesContainer.appendChild(message)
+                    })
+                    connectButton.innerText = 'Disconnect'
                 } else {
-                    ws.close();
-                    connectButton.innerText = "Connect";
+                    ws.close()
+                    connectButton.innerText = 'Connect'
                 }
-            });
+            })
 
-            sendButton.addEventListener("click", (e) => {
-                ws.send(messageInput.value);
-            });
-        });
+            sendButton.addEventListener('click', (e) => {
+                ws.send(messageInput.value)
+            })
+        })
     </script>
 </head>
 

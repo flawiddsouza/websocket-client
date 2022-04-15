@@ -1,7 +1,7 @@
-<script setup lang="ts">
-import Client from './components/Client.vue'
-</script>
-
 <template>
-    <Client />
+    <Frame />
 </template>
+
+<script setup lang="ts">
+import Frame from './components/Frame.vue'
+</script>
