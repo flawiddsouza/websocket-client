@@ -9,6 +9,21 @@
         "format": "npx prettier --ignore-path .gitignore --write ."
     },
     "dependencies": {
+        "@codemirror/closebrackets": "^0.19.2",
+        "@codemirror/commands": "^0.19.8",
+        "@codemirror/comment": "^0.19.1",
+        "@codemirror/fold": "^0.19.3",
+        "@codemirror/gutter": "^0.19.9",
+        "@codemirror/highlight": "^0.19.8",
+        "@codemirror/history": "^0.19.2",
+        "@codemirror/lang-javascript": "^0.19.7",
+        "@codemirror/lang-json": "^0.19.2",
+        "@codemirror/language": "^0.19.10",
+        "@codemirror/lint": "^0.19.6",
+        "@codemirror/matchbrackets": "^0.19.4",
+        "@codemirror/search": "^0.19.10",
+        "@codemirror/state": "^0.19.9",
+        "@codemirror/view": "^0.19.48",
         "dayjs": "^1.11.1",
         "nanoid": "^3.3.2",
         "vue": "^3.2.25"

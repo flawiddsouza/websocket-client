@@ -1,3 +1,9 @@
+html {
+    --default-border-color: lightgrey;
+    --font-monospace: Menlo, Monaco, Consolas, 'Droid Sans Mono', 'Courier New',
+        monospace, 'Droid Sans Fallback';
+}
+
 * {
     box-sizing: border-box;
 }
@@ -47,6 +53,10 @@ body {
     margin-top: 0.5rem;
 }
 
+.ml-1rem {
+    margin-left: 1rem;
+}
+
 .p-0_5rem {
     padding: 0.5rem;
 }
@@ -64,6 +74,10 @@ body {
     width: 100%;
 }
 
+.h-100p {
+    height: 100%;
+}
+
 .oy-a {
     overflow-y: auto;
 }
@@ -76,7 +90,7 @@ table {
 }
 
 table td {
-    border: 1px solid lightgrey;
+    border: 1px solid var(--default-border-color);
     vertical-align: top;
     padding: 0.3rem;
 }
@@ -123,7 +137,7 @@ button.icon > svg {
 textarea,
 input {
     outline: 0;
-    border: 1px solid lightgrey;
+    border: 1px solid var(--default-border-color);
     border-radius: 0.25rem;
     padding: 0.5rem;
     font: inherit;

@@ -1,6 +1,9 @@
 <template>
     <div class="client-component">
-        <div class="align-right mb-0_5rem mr-0_5rem mt-0_5rem">
+        <div class="d-f flex-jc-sb mb-0_5rem ml-1rem mr-0_5rem mt-0_5rem">
+            <button @click="showInterceptorsModal = true">
+                Configure Interceptors
+            </button>
             <button @click="addClient">Add Client</button>
         </div>
         <div class="clients">
@@ -150,12 +153,50 @@
             </div>
         </div>
     </div>
+    <Modal
+        title="Configure Interceptors (Browser refresh required if you've changed interceptor code)"
+        v-model="showInterceptorsModal"
+        width="60vw"
+        height="70vh"
+        v-if="showInterceptorsModal"
+    >
+        <div class="d-f h-100p">
+            <div class="w-100p">
+                <label style="overflow: auto">
+                    <div style="font-weight: 500; margin-bottom: 0.25rem">
+                        Send Interceptor Code
+                    </div>
+                    <CodeMirrorEditor
+                        v-model="sendInterceptorCode"
+                        lang="javascript"
+                        class="code-editor"
+                    ></CodeMirrorEditor>
+                </label>
+            </div>
+            <div class="w-100p ml-1rem">
+                <label style="overflow: auto">
+                    <div style="font-weight: 500; margin-bottom: 0.25rem">
+                        Receive Interceptor Code
+                    </div>
+                    <CodeMirrorEditor
+                        v-model="receiveInterceptorCode"
+                        lang="javascript"
+                        class="code-editor"
+                    ></CodeMirrorEditor>
+                </label>
+            </div>
+        </div>
+    </Modal>
 </template>
 
 <script setup lang="ts">
-import { nanoid } from 'nanoid'
-import dayjs from 'dayjs'
 import { Ref, ref, watch, nextTick, onBeforeMount, reactive } from 'vue'
+import { Client } from '../types'
+import { formatTimestamp, generateId } from '../helpers'
+import Modal from './Modal.vue'
+import CodeMirrorEditor from './CodeMirrorEditor.vue'
+
+// Data Variables
 
 const messageContainerRefs: any = reactive({})
 
@@ -163,23 +204,9 @@ function handleMessageContainerRef(ref: any, clientId: string) {
     messageContainerRefs[clientId] = ref
 }
 
-interface ClientMessage {
-    timestamp: number
-    message: string
-    type: 'SEND' | 'RECEIVE'
-}
-
-interface Client {
-    id: string
-    url: string
-    message: string
-    messages: ClientMessage[]
-    ws: WebSocket | null
-}
-
 const initialClients: Client[] = [
     {
-        id: nanoid(),
+        id: generateId(),
         url: '',
         message: '',
         messages: [],
@@ -189,9 +216,16 @@ const initialClients: Client[] = [
 
 const clients: Ref<Client[]> = ref(initialClients)
 
+const showInterceptorsModal = ref(false)
+
+const sendInterceptorCode = ref('')
+const receiveInterceptorCode = ref('')
+
+// Methods
+
 function addClient() {
     clients.value.push({
-        id: nanoid(),
+        id: generateId(),
         url: '',
         message: '',
         messages: [],
@@ -214,7 +248,17 @@ function connect(client: Client) {
         return
     }
     client.ws = new WebSocket(client.url)
-    client.ws.addEventListener('message', (e) => {
+    client.ws.addEventListener('message', async (e) => {
+        let receivedMessage = e.data
+
+        eval(receiveInterceptorCode.value)
+
+        if ('getReceiveMessage' in window) {
+            receivedMessage = await (window as any).getReceiveMessage(
+                receivedMessage
+            )
+        }
+
         client.messages.push({
             timestamp: new Date().getTime(),
             message: e.data,
@@ -224,11 +268,20 @@ function connect(client: Client) {
     })
 }
 
-function sendMessage(client: Client) {
+async function sendMessage(client: Client) {
     if (client.message === '') {
         return
     }
-    client.ws?.send(client.message)
+
+    let messageToSend = client.message
+
+    eval(sendInterceptorCode.value)
+
+    if ('getSendMessage' in window) {
+        messageToSend = await (window as any).getSendMessage(client.message)
+    }
+
+    client.ws?.send(messageToSend)
     client.messages.push({
         timestamp: new Date().getTime(),
         message: client.message,
@@ -244,10 +297,6 @@ function clearMessages(client: Client) {
 function disconnect(client: Client) {
     client.ws?.close()
     client.ws = null
-}
-
-function formatTimestamp(epoch: number) {
-    return dayjs(epoch).format('YYYY-MM-DD hh:mm A')
 }
 
 function parseAndFormatMessage(message: string) {
@@ -270,11 +319,21 @@ function scrollToBottomClientMessages(clientId: string, smooth = true) {
     })
 }
 
+// Watch
+
+const localStoragePrefix = 'WebSocket-Client-'
+
+const localStorageKeys = {
+    clients: localStoragePrefix + 'clients',
+    sendInterceptorCode: localStoragePrefix + 'sendInterceptorCode',
+    receiveInterceptorCode: localStoragePrefix + 'receiveInterceptorCode'
+}
+
 watch(
-    () => clients,
+    clients,
     () => {
         localStorage.setItem(
-            'Websocket-Client-Clients',
+            localStorageKeys.clients,
             JSON.stringify(
                 clients.value.map((item) => ({
                     ...item,
@@ -286,13 +345,43 @@ watch(
     { deep: true }
 )
 
+watch(sendInterceptorCode, () => {
+    localStorage.setItem(
+        localStorageKeys.sendInterceptorCode,
+        sendInterceptorCode.value
+    )
+})
+
+watch(receiveInterceptorCode, () => {
+    localStorage.setItem(
+        localStorageKeys.receiveInterceptorCode,
+        receiveInterceptorCode.value
+    )
+})
+
+// Lifecycle Events
+
 onBeforeMount(() => {
-    const savedClients = localStorage.getItem('Websocket-Client-Clients')
+    const savedClients = localStorage.getItem(localStorageKeys.clients)
     if (savedClients) {
         clients.value = JSON.parse(savedClients)
         clients.value.forEach((client) => {
             scrollToBottomClientMessages(client.id, false)
         })
+    }
+
+    const savedSendInterceptorCode = localStorage.getItem(
+        localStorageKeys.sendInterceptorCode
+    )
+    if (savedSendInterceptorCode) {
+        sendInterceptorCode.value = savedSendInterceptorCode
+    }
+
+    const savedReceiveInterceptorCode = localStorage.getItem(
+        localStorageKeys.receiveInterceptorCode
+    )
+    if (savedReceiveInterceptorCode) {
+        receiveInterceptorCode.value = savedReceiveInterceptorCode
     }
 })
 </script>
@@ -316,7 +405,7 @@ onBeforeMount(() => {
     flex: 1;
     display: grid;
     grid-template-rows: auto auto auto 1fr;
-    border: 1px solid lightgrey;
+    border: 1px solid var(--default-border-color);
     border-radius: 5px;
 }
 
@@ -339,4 +428,10 @@ table svg {
 /* table tr.red-row > td {
     background-color: #ffb6b6;
 } */
+
+.code-editor {
+    height: calc(100% - 1.2rem);
+    overflow-y: auto;
+    border: 1px solid var(--default-border-color);
+}
 </style>
