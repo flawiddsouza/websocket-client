@@ -154,7 +154,7 @@
         </div>
     </div>
     <Modal
-        title="Configure Interceptors (Browser refresh required if you've changed interceptor code)"
+        title="Configure Interceptors"
         v-model="showInterceptorsModal"
         width="60vw"
         height="70vh"
@@ -257,6 +257,7 @@ function connect(client: Client) {
             receivedMessage = await (window as any).getReceiveMessage(
                 receivedMessage
             )
+            delete (window as any).getReceiveMessage
         }
 
         client.messages.push({
@@ -279,6 +280,7 @@ async function sendMessage(client: Client) {
 
     if ('getSendMessage' in window) {
         messageToSend = await (window as any).getSendMessage(client.message)
+        delete (window as any).getSendMessage
     }
 
     client.ws?.send(messageToSend)
