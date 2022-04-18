@@ -262,7 +262,7 @@ function connect(client: Client) {
 
         client.messages.push({
             timestamp: new Date().getTime(),
-            message: e.data,
+            message: receivedMessage,
             type: 'RECEIVE'
         })
         scrollToBottomClientMessages(client.id)
