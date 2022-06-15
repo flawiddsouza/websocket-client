@@ -5,13 +5,25 @@
                 <button @click="showInterceptorsModal = true">
                     Configure Interceptors
                 </button>
-                <select v-model="interceptorsStatus" style="margin-left: 0.6rem">
+                <select
+                    v-model="interceptorsStatus"
+                    style="margin-left: 0.6rem"
+                >
                     <option>Enabled</option>
                     <option>Disabled</option>
                 </select>
                 <div style="display: inline-flex">
                     <div v-for="(client, index) in clients">
-                        <button style="margin-left: 0.6rem" :class="{ 'disabled': client.visibility === 'hidden', 'c-p-i': client.visibility === 'hidden' }" @click="toggleClientVisibility(client)">Client #{{ index + 1 }}</button>
+                        <button
+                            style="margin-left: 0.6rem"
+                            :class="{
+                                disabled: client.visibility === 'hidden',
+                                'c-p-i': client.visibility === 'hidden'
+                            }"
+                            @click="toggleClientVisibility(client)"
+                        >
+                            Client #{{ index + 1 }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -19,7 +31,10 @@
         </div>
         <div class="clients">
             <template v-for="client in clients">
-                <div class="client" v-if="!client.visibility || client.visibility === 'shown'">
+                <div
+                    class="client"
+                    v-if="!client.visibility || client.visibility === 'shown'"
+                >
                     <div class="d-f flex-ai-c p-0_5rem bc-primary">
                         <input
                             type="text"
@@ -99,7 +114,10 @@
                         <table
                             :ref="
                                 (element) =>
-                                    handleMessageContainerRef(element, client.id)
+                                    handleMessageContainerRef(
+                                        element,
+                                        client.id
+                                    )
                             "
                         >
                             <tbody>
@@ -153,7 +171,11 @@
                                         </div>
                                     </td>
                                     <td style="width: 100%; white-space: pre">
-                                        {{ parseAndFormatMessage(message.message) }}
+                                        {{
+                                            parseAndFormatMessage(
+                                                message.message
+                                            )
+                                        }}
                                     </td>
                                     <td style="width: 1px; white-space: nowrap">
                                         {{ formatTimestamp(message.timestamp) }}
@@ -261,7 +283,8 @@ function removeClient(client: Client) {
 }
 
 function toggleClientVisibility(client: Client) {
-    client.visibility = !client.visibility || client.visibility === 'shown' ? 'hidden' : 'shown'
+    client.visibility =
+        !client.visibility || client.visibility === 'shown' ? 'hidden' : 'shown'
 }
 
 function connect(client: Client) {
@@ -272,7 +295,7 @@ function connect(client: Client) {
     client.ws.addEventListener('message', async (e) => {
         let receivedMessage = e.data
 
-        if(interceptorsStatus.value !== 'Disabled') {
+        if (interceptorsStatus.value !== 'Disabled') {
             eval(receiveInterceptorCode.value)
 
             if ('getReceiveMessage' in window) {
@@ -303,7 +326,7 @@ async function sendMessage(client: Client) {
 
     let messageToSend = client.message
 
-    if(interceptorsStatus.value !== 'Disabled') {
+    if (interceptorsStatus.value !== 'Disabled') {
         eval(sendInterceptorCode.value)
 
         if ('getSendMessage' in window) {
@@ -405,7 +428,7 @@ onBeforeMount(() => {
     if (savedClients) {
         clients.value = JSON.parse(savedClients)
         clients.value.forEach((client) => {
-            if(client.visibility !== 'hidden') {
+            if (client.visibility !== 'hidden') {
                 scrollToBottomClientMessages(client.id, false)
             }
         })
