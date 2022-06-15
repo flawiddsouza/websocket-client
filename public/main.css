@@ -82,6 +82,10 @@ body {
     overflow-y: auto;
 }
 
+.c-p-i {
+    cursor: pointer !important;
+}
+
 /* base styles */
 
 table {
@@ -113,7 +117,8 @@ button:active {
     filter: brightness(1.15);
 }
 
-button:disabled {
+button:disabled,
+button.disabled {
     filter: grayscale(1);
     cursor: default;
 }

@@ -10,4 +10,5 @@ export interface Client {
     message: string
     messages: ClientMessage[]
     ws: WebSocket | null
+    visibility?: 'shown' | 'hidden'
 }
