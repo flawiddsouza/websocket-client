@@ -150,3 +150,7 @@ textarea {
 input:disabled {
     background-color: #f4f4f4;
 }
+
+select {
+    padding: 0.2rem 0.6rem;
+}

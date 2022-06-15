@@ -1,9 +1,15 @@
 <template>
     <div class="client-component">
         <div class="d-f flex-jc-sb mb-0_5rem ml-1rem mr-0_5rem mt-0_5rem">
-            <button @click="showInterceptorsModal = true">
-                Configure Interceptors
-            </button>
+            <div>
+                <button @click="showInterceptorsModal = true">
+                    Configure Interceptors
+                </button>
+                <select v-model="interceptorsStatus" style="margin-left: 0.6rem">
+                    <option>Enabled</option>
+                    <option>Disabled</option>
+                </select>
+            </div>
             <button @click="addClient">Add Client</button>
         </div>
         <div class="clients">
@@ -221,6 +227,8 @@ const showInterceptorsModal = ref(false)
 const sendInterceptorCode = ref('')
 const receiveInterceptorCode = ref('')
 
+const interceptorsStatus = ref('Enabled')
+
 // Methods
 
 function addClient() {
@@ -251,13 +259,15 @@ function connect(client: Client) {
     client.ws.addEventListener('message', async (e) => {
         let receivedMessage = e.data
 
-        eval(receiveInterceptorCode.value)
+        if(interceptorsStatus.value !== 'Disabled') {
+            eval(receiveInterceptorCode.value)
 
-        if ('getReceiveMessage' in window) {
-            receivedMessage = await (window as any).getReceiveMessage(
-                receivedMessage
-            )
-            delete (window as any).getReceiveMessage
+            if ('getReceiveMessage' in window) {
+                receivedMessage = await (window as any).getReceiveMessage(
+                    receivedMessage
+                )
+                delete (window as any).getReceiveMessage
+            }
         }
 
         client.messages.push({
@@ -276,11 +286,13 @@ async function sendMessage(client: Client) {
 
     let messageToSend = client.message
 
-    eval(sendInterceptorCode.value)
+    if(interceptorsStatus.value !== 'Disabled') {
+        eval(sendInterceptorCode.value)
 
-    if ('getSendMessage' in window) {
-        messageToSend = await (window as any).getSendMessage(client.message)
-        delete (window as any).getSendMessage
+        if ('getSendMessage' in window) {
+            messageToSend = await (window as any).getSendMessage(client.message)
+            delete (window as any).getSendMessage
+        }
     }
 
     client.ws?.send(messageToSend)
@@ -328,7 +340,8 @@ const localStoragePrefix = 'WebSocket-Client-'
 const localStorageKeys = {
     clients: localStoragePrefix + 'clients',
     sendInterceptorCode: localStoragePrefix + 'sendInterceptorCode',
-    receiveInterceptorCode: localStoragePrefix + 'receiveInterceptorCode'
+    receiveInterceptorCode: localStoragePrefix + 'receiveInterceptorCode',
+    interceptorsStatus: localStoragePrefix + 'interceptorsStatus'
 }
 
 watch(
@@ -361,6 +374,13 @@ watch(receiveInterceptorCode, () => {
     )
 })
 
+watch(interceptorsStatus, () => {
+    localStorage.setItem(
+        localStorageKeys.interceptorsStatus,
+        interceptorsStatus.value
+    )
+})
+
 // Lifecycle Events
 
 onBeforeMount(() => {
@@ -384,6 +404,13 @@ onBeforeMount(() => {
     )
     if (savedReceiveInterceptorCode) {
         receiveInterceptorCode.value = savedReceiveInterceptorCode
+    }
+
+    const savedInterceptorsStatus = localStorage.getItem(
+        localStorageKeys.interceptorsStatus
+    )
+    if (savedInterceptorsStatus) {
+        interceptorsStatus.value = savedInterceptorsStatus
     }
 })
 </script>
