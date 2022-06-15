@@ -277,6 +277,10 @@ function connect(client: Client) {
         })
         scrollToBottomClientMessages(client.id)
     })
+
+    client.ws.addEventListener('close', async () => {
+        disconnect(client)
+    })
 }
 
 async function sendMessage(client: Client) {
