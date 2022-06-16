@@ -9,7 +9,7 @@
                 @click="setSelectedProject(project.id)"
             >
                 <div>{{ project.name }}</div>
-                <div style="height: 1.4rem" class="client-sidebar-item-menu" @click.stop="showProjectContextMenu($event, project)">
+                <div style="height: 1.4rem" class="client-sidebar-item-menu" :class="{ 'client-sidebar-item-menu-disable-hide': project.id === clickedContextMenuProject.id }" @click.stop="showProjectContextMenu($event, project)">
                     <svg viewBox="0 0 24 24" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;">
                         <g>
                             <path d="M12,16.5c0.83,0,1.5,0.67,1.5,1.5s-0.67,1.5-1.5,1.5s-1.5-0.67-1.5-1.5S11.17,16.5,12,16.5z M10.5,12 c0,0.83,0.67,1.5,1.5,1.5s1.5-0.67,1.5-1.5s-0.67-1.5-1.5-1.5S10.5,11.17,10.5,12z M10.5,6c0,0.83,0.67,1.5,1.5,1.5 s1.5-0.67,1.5-1.5S12.83,4.5,12,4.5S10.5,5.17,10.5,6z"></path>
@@ -508,9 +508,17 @@ function loadSavedClients(projectId: string) {
 }
 
 function showProjectContextMenu(event: MouseEvent, project: Project) {
+    if(clickedContextMenuProject.value.id === project.id) {
+        showProjectContextMenuPopup.value = false
+        return
+    }
+    const menuElement = event.target as Element
+    var clientRect = menuElement.getBoundingClientRect()
+    var clientX = clientRect.left
+    var clientY = clientRect.top
     clickedContextMenuProject.value = project
-    showProjectContextMenuPopupCoords.value.x = (event.clientX - 14) + 'px'
-    showProjectContextMenuPopupCoords.value.y = (event.clientY + 14) + 'px'
+    showProjectContextMenuPopupCoords.value.x = clientX + 'px'
+    showProjectContextMenuPopupCoords.value.y = (clientY + clientRect.height + 5) + 'px'
     showProjectContextMenuPopup.value = true
 }
 
@@ -598,6 +606,12 @@ watch(showSidebar, () => {
         localStorageKeys.showSidebar,
         JSON.stringify(showSidebar.value)
     )
+})
+
+watch(showProjectContextMenuPopup, () => {
+    if(showProjectContextMenuPopup.value === false) {
+        clickedContextMenuProject.value = { id: '', name: '' }
+    }
 })
 
 // Lifecycle Events
@@ -696,14 +710,26 @@ onUnmounted(() => {
 
 .client-sidebar > .client-sidebar-item > .client-sidebar-item-menu {
     visibility: hidden;
+    border-radius: 10px;
 }
 
-.client-sidebar > .client-sidebar-item:hover > .client-sidebar-item-menu {
+.client-sidebar > .client-sidebar-item:hover > .client-sidebar-item-menu,
+.client-sidebar > .client-sidebar-item > .client-sidebar-item-menu.client-sidebar-item-menu-disable-hide {
     visibility: visible;
 }
 
-.client-sidebar > .client-sidebar-item:hover.client-sidebar-item-selected > .client-sidebar-item-menu svg {
+.client-sidebar > .client-sidebar-item.client-sidebar-item-selected > .client-sidebar-item-menu svg {
     fill: white;
+}
+
+.client-sidebar > .client-sidebar-item > .client-sidebar-item-menu:hover,
+.client-sidebar > .client-sidebar-item > .client-sidebar-item-menu.client-sidebar-item-menu-disable-hide {
+    background-color: rgba(240, 248, 255, 0.233);
+}
+
+.client-sidebar > .client-sidebar-item:not(.client-sidebar-item-selected) > .client-sidebar-item-menu:hover,
+.client-sidebar > .client-sidebar-item:not(.client-sidebar-item-selected) > .client-sidebar-item-menu.client-sidebar-item-menu-disable-hide {
+    background-color: rgb(108 194 197 / 20%);
 }
 
 .client-component {
