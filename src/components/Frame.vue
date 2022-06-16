@@ -247,7 +247,9 @@
             </div>
         </div>
     </Modal>
+    <EnvironmentModal v-model:showModal="environmentModalShow" :project="clickedContextMenuProject" />
     <div class="context-menu" :style="{ top: showProjectContextMenuPopupCoords.y, left: showProjectContextMenuPopupCoords.x }" v-if="showProjectContextMenuPopup">
+        <div @click="environmentProject">Environment</div>
         <div @click="renameProject">Rename</div>
         <div @click="deleteProject">Delete</div>
     </div>
@@ -256,9 +258,11 @@
 <script setup lang="ts">
 import { Ref, ref, watch, nextTick, onBeforeMount, reactive, onMounted, onUnmounted } from 'vue'
 import { Client, Project } from '../types'
-import { formatTimestamp, generateId } from '../helpers'
+import { formatTimestamp, generateId, getObjectPaths } from '../helpers'
+import getObjectPathValue from 'lodash.get'
 import Modal from './Modal.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
+import EnvironmentModal from './EnvironmentModal.vue'
 
 // Data Variables
 
@@ -282,6 +286,7 @@ const showProjectContextMenuPopupCoords = ref({
     x: '',
     y: ''
 })
+const environmentModalShow = ref(false)
 
 // Methods
 
@@ -304,6 +309,11 @@ function addProject() {
 function setSelectedProject(projectId: string) {
     selectedProjectId.value = projectId
     loadSavedClients(selectedProjectId.value)
+}
+
+function environmentProject() {
+    environmentModalShow.value = true
+    showProjectContextMenuPopup.value = false
 }
 
 function renameProject() {
@@ -373,7 +383,26 @@ function connect(client: Client) {
     if (client.url === '') {
         return
     }
-    client.ws = new WebSocket(client.url)
+
+    let clientUrlWithEnvironmentVariablesSubtituted = client.url
+    const selectedProject = projects.value.find(project => project.id === selectedProjectId.value)
+    const environment = selectedProject?.environment ?? {}
+
+    const possibleEnvironmentObjectPaths: string[] = getObjectPaths(environment)
+
+    possibleEnvironmentObjectPaths.forEach(objectPath => {
+        const objectPathValue = getObjectPathValue(environment, objectPath)
+        clientUrlWithEnvironmentVariablesSubtituted = clientUrlWithEnvironmentVariablesSubtituted.replace(`{{ _.${objectPath} }}`, objectPathValue)
+        clientUrlWithEnvironmentVariablesSubtituted = clientUrlWithEnvironmentVariablesSubtituted.replace(`{{${objectPath}}}`, objectPathValue)
+    })
+
+    try {
+        client.ws = new WebSocket(clientUrlWithEnvironmentVariablesSubtituted)
+    } catch {
+        alert(`Invalid WebSocket URL: ${clientUrlWithEnvironmentVariablesSubtituted}`)
+        return
+    }
+
     client.ws.addEventListener('message', async (e) => {
         let receivedMessage = e.data
 

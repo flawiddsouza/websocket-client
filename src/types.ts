@@ -16,5 +16,6 @@ export interface Client {
 
 export interface Project {
     id: string,
-    name: string
+    name: string,
+    environment?: any
 }
