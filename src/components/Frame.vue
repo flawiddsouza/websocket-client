@@ -254,7 +254,7 @@
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, watch, nextTick, onBeforeMount, reactive } from 'vue'
+import { Ref, ref, watch, nextTick, onBeforeMount, reactive, onMounted, onUnmounted } from 'vue'
 import { Client, Project } from '../types'
 import { formatTimestamp, generateId } from '../helpers'
 import Modal from './Modal.vue'
@@ -485,6 +485,16 @@ function showProjectContextMenu(event: MouseEvent, project: Project) {
     showProjectContextMenuPopup.value = true
 }
 
+function hideContextMenusWhenClickedOutside(event: Event) {
+    const target = document.querySelector('.context-menu')
+
+    const withinBoundaries = event.composedPath().includes(target as EventTarget)
+
+    if (!withinBoundaries) {
+        showProjectContextMenuPopup.value = false
+    }
+}
+
 // Watch
 
 const localStoragePrefix = 'WebSocket-Client-'
@@ -611,6 +621,16 @@ onBeforeMount(() => {
     if (savedShowSidebar) {
         showSidebar.value = JSON.parse(savedShowSidebar)
     }
+})
+
+onMounted(() => {
+    document.addEventListener('click', hideContextMenusWhenClickedOutside)
+    document.addEventListener('contextmenu', hideContextMenusWhenClickedOutside)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('click', hideContextMenusWhenClickedOutside)
+    document.removeEventListener('contextmenu', hideContextMenusWhenClickedOutside)
 })
 </script>
 
