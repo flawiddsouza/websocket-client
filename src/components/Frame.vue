@@ -422,6 +422,10 @@ function connect(client: Client) {
             message: receivedMessage,
             type: 'RECEIVE'
         })
+
+        // keep only last 100 messages to avoid crashing the application
+        client.messages = client.messages.slice(-100)
+
         scrollToBottomClientMessages(client.id)
     })
 
