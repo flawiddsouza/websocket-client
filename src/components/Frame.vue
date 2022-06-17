@@ -257,7 +257,7 @@
 
 <script setup lang="ts">
 import { Ref, ref, watch, nextTick, onBeforeMount, reactive, onMounted, onUnmounted } from 'vue'
-import { Client, Project } from '../types'
+import { Client, ClientMessage, Project } from '../types'
 import { formatTimestamp, generateId, getObjectPaths } from '../helpers'
 import getObjectPathValue from 'lodash.get'
 import Modal from './Modal.vue'
@@ -417,21 +417,29 @@ function connect(client: Client) {
             }
         }
 
-        client.messages.push({
+        const clientMessage: ClientMessage = {
             timestamp: new Date().getTime(),
             message: receivedMessage,
             type: 'RECEIVE'
-        })
+        }
 
-        // keep only last 100 messages to avoid crashing the application
-        client.messages = client.messages.slice(-100)
-
-        scrollToBottomClientMessages(client.id)
+        addClientMessage(client, clientMessage)
     })
 
     client.ws.addEventListener('close', async () => {
         disconnect(client)
     })
+}
+
+function addClientMessage(client: Client, clientMessage: ClientMessage) {
+    client.messages.push(clientMessage)
+
+    // keep only last 100 messages to avoid crashing the application
+    client.messages = client.messages.slice(-100)
+
+    if (client.visibility !== 'hidden') {
+        scrollToBottomClientMessages(client.id)
+    }
 }
 
 async function sendMessage(client: Client) {
@@ -451,12 +459,14 @@ async function sendMessage(client: Client) {
     }
 
     client.ws?.send(messageToSend)
-    client.messages.push({
+
+    const clientMessage: ClientMessage = {
         timestamp: new Date().getTime(),
         message: client.message,
         type: 'SEND'
-    })
-    scrollToBottomClientMessages(client.id)
+    }
+
+    addClientMessage(client, clientMessage)
 }
 
 function clearMessages(client: Client) {
@@ -479,10 +489,10 @@ function parseAndFormatMessage(message: string) {
     return message
 }
 
-function scrollToBottomClientMessages(clientId: string, smooth = true) {
+function scrollToBottomClientMessages(clientId: string) {
     nextTick(() => {
         messageContainerRefs[clientId].scrollIntoView({
-            behavior: smooth ? 'smooth' : 'auto',
+            behavior: 'auto',
             block: 'end'
         })
     })
@@ -494,7 +504,7 @@ function loadSavedClients(projectId: string) {
         clients.value = JSON.parse(savedClients)
         clients.value.forEach((client) => {
             if (client.visibility !== 'hidden') {
-                scrollToBottomClientMessages(client.id, false)
+                scrollToBottomClientMessages(client.id)
             }
         })
     } else {
