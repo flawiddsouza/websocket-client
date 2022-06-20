@@ -9,7 +9,7 @@
                 @click="setSelectedProject(project.id)"
             >
                 <div>{{ project.name }}</div>
-                <div style="height: 1.4rem" class="client-sidebar-item-menu" :class="{ 'client-sidebar-item-menu-disable-hide': project.id === clickedContextMenuProject.id }" @click.stop="showProjectContextMenu($event, project)">
+                <div style="height: 1.4rem" class="client-sidebar-item-menu" :class="{ 'client-sidebar-item-menu-disable-hide': project.id === clickedContextMenuProject.id &&  showProjectContextMenuPopup === true }" @click.stop="showProjectContextMenu($event, project)">
                     <svg viewBox="0 0 24 24" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;">
                         <g>
                             <path d="M12,16.5c0.83,0,1.5,0.67,1.5,1.5s-0.67,1.5-1.5,1.5s-1.5-0.67-1.5-1.5S11.17,16.5,12,16.5z M10.5,12 c0,0.83,0.67,1.5,1.5,1.5s1.5-0.67,1.5-1.5s-0.67-1.5-1.5-1.5S10.5,11.17,10.5,12z M10.5,6c0,0.83,0.67,1.5,1.5,1.5 s1.5-0.67,1.5-1.5S12.83,4.5,12,4.5S10.5,5.17,10.5,6z"></path>
@@ -313,31 +313,31 @@ function setSelectedProject(projectId: string) {
 
 function environmentProject() {
     environmentModalShow.value = true
-    showProjectContextMenuPopup.value = false
+    hideProjectContextMenu(false)
 }
 
 function renameProject() {
     const newProjectName = prompt('Enter new project name', clickedContextMenuProject.value.name)
 
     if(!newProjectName || newProjectName.trim() === '') {
-        showProjectContextMenuPopup.value = false
+        hideProjectContextMenu()
         return
     }
 
     clickedContextMenuProject.value.name = newProjectName
 
-    showProjectContextMenuPopup.value = false
+    hideProjectContextMenu()
 }
 
 function deleteProject() {
     if(projects.value.length === 1) {
         alert('Cannot delete project as there\'s only one project left')
-        showProjectContextMenuPopup.value = false
+        hideProjectContextMenu()
         return
     }
 
     if(!confirm('Are you sure you want to delete this project?')) {
-        showProjectContextMenuPopup.value = false
+        hideProjectContextMenu()
         return
     }
 
@@ -349,7 +349,7 @@ function deleteProject() {
         setSelectedProject(projects.value[0].id)
     }
 
-    showProjectContextMenuPopup.value = false
+    hideProjectContextMenu()
 }
 
 function addClient() {
@@ -522,8 +522,8 @@ function loadSavedClients(projectId: string) {
 }
 
 function showProjectContextMenu(event: MouseEvent, project: Project) {
-    if(clickedContextMenuProject.value.id === project.id) {
-        showProjectContextMenuPopup.value = false
+    if(clickedContextMenuProject.value.id === project.id && showProjectContextMenuPopup.value === true) {
+        hideProjectContextMenu()
         return
     }
     const menuElement = event.target as Element
@@ -536,13 +536,23 @@ function showProjectContextMenu(event: MouseEvent, project: Project) {
     showProjectContextMenuPopup.value = true
 }
 
+function hideProjectContextMenu(clearClickedContextMenuProject=true) {
+    if(showProjectContextMenuPopup.value === false) {
+        return
+    }
+    showProjectContextMenuPopup.value = false
+    if(clearClickedContextMenuProject) {
+        clickedContextMenuProject.value = { id: '', name: '' }
+    }
+}
+
 function hideContextMenusWhenClickedOutside(event: Event) {
     const target = document.querySelector('.context-menu')
 
     const withinBoundaries = event.composedPath().includes(target as EventTarget)
 
     if (!withinBoundaries) {
-        showProjectContextMenuPopup.value = false
+        hideProjectContextMenu()
     }
 }
 
@@ -620,12 +630,6 @@ watch(showSidebar, () => {
         localStorageKeys.showSidebar,
         JSON.stringify(showSidebar.value)
     )
-})
-
-watch(showProjectContextMenuPopup, () => {
-    if(showProjectContextMenuPopup.value === false) {
-        clickedContextMenuProject.value = { id: '', name: '' }
-    }
 })
 
 // Lifecycle Events
