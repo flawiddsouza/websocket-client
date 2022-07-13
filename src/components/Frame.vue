@@ -379,15 +379,19 @@ function toggleClientVisibility(client: Client) {
         !client.visibility || client.visibility === 'shown' ? 'hidden' : 'shown'
 }
 
+function getEnvironment() {
+    const selectedProject = projects.value.find(project => project.id === selectedProjectId.value)
+    const environment = selectedProject?.environment ?? {}
+    return environment
+}
+
 function connect(client: Client) {
     if (client.url === '') {
         return
     }
 
     let clientUrlWithEnvironmentVariablesSubtituted = client.url
-    const selectedProject = projects.value.find(project => project.id === selectedProjectId.value)
-    const environment = selectedProject?.environment ?? {}
-
+    const environment = getEnvironment()
     const possibleEnvironmentObjectPaths: string[] = getObjectPaths(environment)
 
     possibleEnvironmentObjectPaths.forEach(objectPath => {
@@ -407,6 +411,11 @@ function connect(client: Client) {
         let receivedMessage = e.data
 
         if (interceptorsStatus.value !== 'Disabled') {
+            (window as any).getEnvironmentVariable = (objectPath: string) => {
+                const environment = getEnvironment()
+                return getObjectPathValue(environment, objectPath)
+            }
+
             eval(receiveInterceptorCode.value)
 
             if ('getReceiveMessage' in window) {
@@ -450,6 +459,11 @@ async function sendMessage(client: Client) {
     let messageToSend = client.message
 
     if (interceptorsStatus.value !== 'Disabled') {
+        (window as any).getEnvironmentVariable = (objectPath: string) => {
+            const environment = getEnvironment()
+            return getObjectPathValue(environment, objectPath)
+        }
+
         eval(sendInterceptorCode.value)
 
         if ('getSendMessage' in window) {
