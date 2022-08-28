@@ -63,6 +63,7 @@
                             <input
                                 type="text"
                                 v-model="client.url"
+                                placeholder="WebSocket URL"
                                 class="w-100p"
                                 :disabled="client.ws ? true : false"
                             />
