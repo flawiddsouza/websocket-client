@@ -195,7 +195,7 @@
                                                 </svg>
                                             </div>
                                         </td>
-                                        <td style="width: 100%; white-space: pre">
+                                        <td style="width: 100%; white-space: pre-wrap; word-break: break-all;">
                                             {{
                                                 parseAndFormatMessage(
                                                     message.message
