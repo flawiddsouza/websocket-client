@@ -97,12 +97,28 @@
                             </div>
                         </div>
 
-                        <div class="p-0_5rem">
+                        <div class="p-0_5rem o-a">
+                            <tabs
+                                :tabs="client.payloads"
+                                :currentTabId="client.currentPayloadId"
+                                @change-tab="changePayloadTab(client, $event)"
+                                @close-tab="closePayloadTab(client, $event)"
+                            >
+                                <button @click="addNewPayload(client)" style="white-space: nowrap">+ New Payload</button>
+                            </tabs>
+                            <input
+                                type="text"
+                                placeholder="Payload Name"
+                                class="w-100p mt-0_5rem"
+                                :value="getCurrentPayloadName(client)"
+                                @input="updateCurrentPayload(client, 'name', ($event as any).target.value)"
+                            />
                             <textarea
-                                class="w-100p"
+                                class="w-100p mt-0_5rem"
                                 rows="5"
                                 placeholder="Payload"
                                 v-model="client.message"
+                                @input="updateCurrentPayload(client, 'payload', ($event as any).target.value)"
                             ></textarea>
                             <div class="align-right">
                                 <button
@@ -258,12 +274,13 @@
 
 <script setup lang="ts">
 import { Ref, ref, watch, nextTick, onBeforeMount, reactive, onMounted, onUnmounted } from 'vue'
-import { Client, ClientMessage, Project } from '../types'
+import { Client, ClientPayload, ClientMessage, Project } from '../types'
 import { formatTimestamp, generateId, getObjectPaths } from '../helpers'
 import getObjectPathValue from 'lodash.get'
 import Modal from './Modal.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
 import EnvironmentModal from './EnvironmentModal.vue'
+import Tabs from './Tabs.vue'
 
 // Data Variables
 
@@ -354,10 +371,20 @@ function deleteProject() {
 }
 
 function addClient() {
+    const payloadId = generateId()
+
     clients.value.push({
         projectId: selectedProjectId.value,
         id: generateId(),
         url: '',
+        payloads: [
+            {
+                id: payloadId,
+                name: 'Payload 1',
+                payload: ''
+            }
+        ],
+        currentPayloadId: payloadId,
         message: '',
         messages: [],
         ws: null,
@@ -513,25 +540,51 @@ function scrollToBottomClientMessages(clientId: string) {
     })
 }
 
+function migrateSavedClientToNewDataStructure(client: Client) {
+    if('payloads' in client === false) {
+        const payloadId = generateId()
+        client.payloads = [
+            {
+                id: payloadId,
+                name: 'Payload 1',
+                payload: ''
+            }
+        ]
+        client.currentPayloadId = payloadId
+    }
+}
+
 function loadSavedClients(projectId: string) {
     const savedClients = localStorage.getItem(localStorageKeys.clients + `-${projectId}`)
     if (savedClients) {
         clients.value = JSON.parse(savedClients)
         clients.value.forEach((client) => {
+            migrateSavedClientToNewDataStructure(client)
             if (client.visibility !== 'hidden') {
                 scrollToBottomClientMessages(client.id)
             }
         })
     } else {
+        const firstPayloadId = generateId()
+
         const initialClient: Client = {
             projectId: projectId,
             id: generateId(),
             url: '',
+            payloads: [
+                {
+                    id: firstPayloadId,
+                    name: 'Payload 1',
+                    payload: ''
+                }
+            ],
+            currentPayloadId: firstPayloadId,
             message: '',
             messages: [],
             ws: null,
             visibility: 'shown'
         }
+
         clients.value = [initialClient]
     }
 }
@@ -569,6 +622,53 @@ function hideContextMenusWhenClickedOutside(event: Event) {
     if (!withinBoundaries) {
         hideProjectContextMenu()
     }
+}
+
+function addNewPayload(client: Client) {
+    const payloadId = generateId()
+
+    client.payloads.push({
+        id: payloadId,
+        name: `Payload ${client.payloads.length + 1}`,
+        payload: ''
+    })
+
+    client.currentPayloadId = payloadId
+    client.message = ''
+}
+
+function updateCurrentPayload(client: Client, field: 'name' | 'payload', value: string) {
+    const payloadToUpdate: ClientPayload | undefined = client.payloads.find(payload => payload.id === client.currentPayloadId)
+    if(payloadToUpdate) {
+        payloadToUpdate[field] = value
+    }
+}
+
+function changePayloadTab(client: Client, tab: ClientPayload) {
+    client.currentPayloadId = tab.id
+    client.message = tab.payload
+}
+
+function closePayloadTab(client: Client, event: { tabToClose: ClientPayload, tabToOpen: ClientPayload }) {
+    if(client.payloads.length === 1) {
+        alert('Cannot delete payload as there\'s only one payload left')
+        return
+    }
+
+    if(!confirm(`Are you sure you want to remove "${event.tabToClose.name}?"`)) {
+        return
+    }
+
+    client.payloads = client.payloads.filter(clientPayload => clientPayload.id !== event.tabToClose.id)
+
+    if(event.tabToOpen) {
+        client.currentPayloadId = event.tabToOpen.id
+    }
+}
+
+function getCurrentPayloadName(client: Client) {
+    const currentPayload: ClientPayload | undefined = client.payloads.find(payload => payload.id === client.currentPayloadId)
+    return currentPayload?.name
 }
 
 // Watch

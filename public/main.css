@@ -92,6 +92,10 @@ body {
     overflow-y: auto;
 }
 
+.o-a {
+    overflow: auto;
+}
+
 .c-p-i {
     cursor: pointer !important;
 }
