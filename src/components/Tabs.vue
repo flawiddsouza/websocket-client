@@ -85,7 +85,9 @@ export default defineComponent({
 
 <style scoped>
 .tab {
-    border: 1px solid lightgrey;
+    border-top: 1px solid var(--default-border-color);
+    border-bottom: 1px solid var(--default-border-color);
+    border-right: 1px solid var(--default-border-color);
     padding: 0.3rem;
     cursor: pointer;
     white-space: nowrap;
@@ -95,13 +97,15 @@ export default defineComponent({
     padding-left: 0.5rem;
 }
 
+.tab:first-child {
+    border-left: 1px solid var(--default-border-color);
+}
+
 .tab:not(:first-child) {
     border-left: 0;
 }
 
 .tab-active {
-    background-color: cadetblue;
-    color: white;
-    border-color: cadetblue;
+    border-top: 1px solid red;
 }
 </style>

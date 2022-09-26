@@ -104,7 +104,7 @@
                                 @change-tab="changePayloadTab(client, $event)"
                                 @close-tab="closePayloadTab(client, $event)"
                             >
-                                <button @click="addNewPayload(client)" style="white-space: nowrap">+ New Payload</button>
+                                <button @click="addNewPayload(client)" style="white-space: nowrap" title="Add New Payload">+</button>
                             </tabs>
                             <input
                                 type="text"
