@@ -51,7 +51,10 @@
                         </div>
                     </div>
                 </div>
-                <button @click="addClient">Add Client</button>
+                <div>
+                    <button @click="startBackupRestore">Backup & Restore</button>
+                    <button @click="addClient" class="ml-1rem">Add Client</button>
+                </div>
             </div>
             <div class="clients">
                 <template v-for="client in clients">
@@ -270,6 +273,26 @@
         <div @click="renameProject">Rename</div>
         <div @click="deleteProject">Delete</div>
     </div>
+    <Modal
+        title="Backup & Restore"
+        v-model="showBackupRestoreModal"
+        v-if="showBackupRestoreModal"
+    >
+        <div>
+            <div>Backup</div>
+            <button @click="downloadBackup" class="mt-1rem">Download Backup</button>
+        </div>
+
+        <div style="margin-top: 2rem"></div>
+
+        <form class="mt-1rem" @submit.prevent="restoreBackup">
+            <div>Restore</div>
+            <div class="mt-1rem">
+                <input type="file" @change="handleRestoreFileChange" required style="font-size: 0.9rem" />
+            </div>
+            <button class="mt-1rem">Restore Backup</button>
+        </form>
+    </Modal>
 </template>
 
 <script setup lang="ts">
@@ -305,6 +328,8 @@ const showProjectContextMenuPopupCoords = ref({
     y: ''
 })
 const environmentModalShow = ref(false)
+const showBackupRestoreModal = ref(false)
+const fileToRestore = ref<File | null>(null)
 
 // Methods
 
@@ -669,6 +694,79 @@ function closePayloadTab(client: Client, event: { tabToClose: ClientPayload, tab
 function getCurrentPayloadName(client: Client) {
     const currentPayload: ClientPayload | undefined = client.payloads.find(payload => payload.id === client.currentPayloadId)
     return currentPayload?.name
+}
+
+function startBackupRestore() {
+    showBackupRestoreModal.value = true
+}
+
+function downloadBackup() {
+    const localStorageData = JSON.stringify(localStorage)
+    const blob = new Blob([localStorageData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const isoDate = new Date().toISOString().split('T')[0]
+    link.download = `Socketfox_${isoDate}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    link.remove()
+}
+
+
+type LocalStorageKeyValue = {
+    [key: string]: string
+}
+
+async function readFileAsJson(file: File): Promise<LocalStorageKeyValue> {
+    const reader = new FileReader()
+
+    return new Promise((resolve, reject) => {
+        reader.onload = (event: any) => {
+            try {
+                const jsonData = JSON.parse(event.target.result)
+                resolve(jsonData)
+            } catch (error) {
+                reject(error)
+            }
+        }
+
+        reader.onerror = (event: any) => {
+            reject(event.error)
+        }
+
+        reader.readAsText(file)
+    })
+}
+
+function handleRestoreFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    if(input.files?.length) {
+        fileToRestore.value = input.files[0]
+    }
+}
+
+async function restoreBackup() {
+    try {
+        const data: LocalStorageKeyValue = await readFileAsJson(fileToRestore.value as File)
+
+        if(!confirm('This will clear all your existing data in this app and restore whatever is in the backup you select. Are you sure you want to continue?')) {
+            return
+        }
+
+        localStorage.clear()
+
+        for(const key in data) {
+            localStorage.setItem(key, data[key])
+        }
+
+        alert('Backup restored successfully')
+
+        window.location.reload()
+    } catch(e) {
+        console.log(e)
+        alert('Invalid backup file given')
+    }
 }
 
 // Watch
