@@ -158,7 +158,8 @@ button.icon > svg {
 }
 
 textarea,
-input {
+input,
+select {
     outline: 0;
     border: 1px solid var(--default-border-color);
     border-radius: 0.25rem;

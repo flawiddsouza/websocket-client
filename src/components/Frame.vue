@@ -63,11 +63,15 @@
                         v-if="!client.visibility || client.visibility === 'shown'"
                     >
                         <div class="d-f flex-ai-c p-0_5rem bc-primary">
+                            <select v-model="client.type" class="h-100p">
+                                <option :value="undefined">WS</option>
+                                <option value="Socket.IO">IO</option>
+                            </select>
                             <input
                                 type="text"
                                 v-model="client.url"
-                                placeholder="WebSocket URL"
-                                class="w-100p"
+                                :placeholder="`${client.type === undefined ? 'WebSocket URL' : 'Socket.IO URL'}`"
+                                class="ml-0_5rem w-100p"
                                 :disabled="client.ws ? true : false"
                             />
                             <div class="ml-0_5rem">
@@ -109,13 +113,23 @@
                             >
                                 <button @click="addNewPayload(client)" style="white-space: nowrap" title="Add New Payload">+</button>
                             </tabs>
-                            <input
-                                type="text"
-                                placeholder="Payload Name"
-                                class="w-100p mt-0_5rem"
-                                :value="getCurrentPayloadName(client)"
-                                @input="updateCurrentPayload(client, 'name', ($event as any).target.value)"
-                            />
+                            <div class="d-f mt-0_5rem">
+                                <input
+                                    type="text"
+                                    placeholder="Payload Name"
+                                    class="w-100p"
+                                    :value="getCurrentPayloadValue(client, 'name')"
+                                    @input="updateCurrentPayload(client, 'name', ($event as any).target.value)"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Event Name"
+                                    class="w-100p ml-0_5rem"
+                                    :value="getCurrentPayloadValue(client, 'event')"
+                                    @input="updateCurrentPayload(client, 'event', ($event as any).target.value)"
+                                    v-if="client.type === 'Socket.IO'"
+                                />
+                            </div>
                             <textarea
                                 class="w-100p mt-0_5rem"
                                 rows="5"
@@ -304,6 +318,7 @@ import Modal from './Modal.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
 import EnvironmentModal from './EnvironmentModal.vue'
 import Tabs from './Tabs.vue'
+import { Socket, io } from 'socket.io-client'
 
 // Data Variables
 
@@ -454,43 +469,64 @@ function connect(client: Client) {
     })
 
     try {
-        client.ws = new WebSocket(clientUrlWithEnvironmentVariablesSubtituted)
+        if (client.type === undefined) {
+            client.ws = new WebSocket(clientUrlWithEnvironmentVariablesSubtituted)
+        } else if (client.type === 'Socket.IO') {
+            client.ws = io(clientUrlWithEnvironmentVariablesSubtituted)
+        }
     } catch {
         alert(`Invalid WebSocket URL: ${clientUrlWithEnvironmentVariablesSubtituted}`)
         return
     }
 
-    client.ws.addEventListener('message', async (e) => {
-        let receivedMessage = e.data
+    if (client.ws instanceof WebSocket) {
+        client.ws.addEventListener('message', async (e) => {
+            let receivedMessage = e.data
 
-        if (interceptorsStatus.value !== 'Disabled') {
-            (window as any).getEnvironmentVariable = (objectPath: string) => {
-                const environment = getEnvironment()
-                return getObjectPathValue(environment, objectPath)
-            }
+            clientMessageHandler(client, receivedMessage)
+        })
 
-            eval(receiveInterceptorCode.value)
+        client.ws.addEventListener('close', async () => {
+            disconnect(client)
+        })
+    }
 
-            if ('getReceiveMessage' in window) {
-                receivedMessage = await (window as any).getReceiveMessage(
-                    receivedMessage
-                )
-                delete (window as any).getReceiveMessage
-            }
+    if (client.ws instanceof Socket) {
+        client.ws.onAny(async (event, ...args) => {
+            const receivedMessage = `[${event}] ${args[0]}`
+            clientMessageHandler(client, receivedMessage)
+        })
+
+        client.ws.on('disconnect', async () => {
+            disconnect(client)
+        })
+    }
+}
+
+async function clientMessageHandler(client: Client, receivedMessage: string) {
+    if (interceptorsStatus.value !== 'Disabled') {
+        (window as any).getEnvironmentVariable = (objectPath: string) => {
+            const environment = getEnvironment()
+            return getObjectPathValue(environment, objectPath)
         }
 
-        const clientMessage: ClientMessage = {
-            timestamp: new Date().getTime(),
-            message: receivedMessage,
-            type: 'RECEIVE'
+        eval(receiveInterceptorCode.value)
+
+        if ('getReceiveMessage' in window) {
+            receivedMessage = await (window as any).getReceiveMessage(
+                receivedMessage
+            )
+            delete (window as any).getReceiveMessage
         }
+    }
 
-        addClientMessage(client, clientMessage)
-    })
+    const clientMessage: ClientMessage = {
+        timestamp: new Date().getTime(),
+        message: receivedMessage,
+        type: 'RECEIVE'
+    }
 
-    client.ws.addEventListener('close', async () => {
-        disconnect(client)
-    })
+    addClientMessage(client, clientMessage)
 }
 
 function addClientMessage(client: Client, clientMessage: ClientMessage) {
@@ -506,6 +542,10 @@ function addClientMessage(client: Client, clientMessage: ClientMessage) {
 
 async function sendMessage(client: Client) {
     if (client.message === '') {
+        return
+    }
+
+    if (client.event === undefined || client.event === '') {
         return
     }
 
@@ -525,11 +565,23 @@ async function sendMessage(client: Client) {
         }
     }
 
-    client.ws?.send(messageToSend)
+    if (client.ws instanceof WebSocket) {
+        client.ws.send(messageToSend)
+    }
+
+    if (client.ws instanceof Socket) {
+        client.ws.emit(client.event, messageToSend)
+    }
+
+    let clientMessageToSave = client.message
+
+    if (client.ws instanceof Socket) {
+        clientMessageToSave = `[${client.event}] ${clientMessageToSave}`
+    }
 
     const clientMessage: ClientMessage = {
         timestamp: new Date().getTime(),
-        message: client.message,
+        message: clientMessageToSave,
         type: 'SEND'
     }
 
@@ -662,16 +714,20 @@ function addNewPayload(client: Client) {
     client.message = ''
 }
 
-function updateCurrentPayload(client: Client, field: 'name' | 'payload', value: string) {
+function updateCurrentPayload(client: Client, field: 'name' | 'event' | 'payload', value: string) {
     const payloadToUpdate: ClientPayload | undefined = client.payloads.find(payload => payload.id === client.currentPayloadId)
     if(payloadToUpdate) {
         payloadToUpdate[field] = value
+        if (field === 'event') {
+            client.event = value
+        }
     }
 }
 
 function changePayloadTab(client: Client, tab: ClientPayload) {
     client.currentPayloadId = tab.id
     client.message = tab.payload
+    client.event = tab.event
 }
 
 function closePayloadTab(client: Client, event: { tabToClose: ClientPayload, tabToOpen: ClientPayload }) {
@@ -691,9 +747,14 @@ function closePayloadTab(client: Client, event: { tabToClose: ClientPayload, tab
     }
 }
 
-function getCurrentPayloadName(client: Client) {
+function getCurrentPayloadValue(client: Client, field: 'name' | 'event' | 'payload') {
     const currentPayload: ClientPayload | undefined = client.payloads.find(payload => payload.id === client.currentPayloadId)
-    return currentPayload?.name
+
+    if (currentPayload !== undefined) {
+        return currentPayload[field]
+    }
+
+    return undefined
 }
 
 function startBackupRestore() {
