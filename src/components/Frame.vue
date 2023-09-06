@@ -545,7 +545,7 @@ async function sendMessage(client: Client) {
         return
     }
 
-    if (client.event === undefined || client.event === '') {
+    if (client.ws instanceof Socket && (client.event === undefined || client.event === '')) {
         return
     }
 
@@ -569,7 +569,7 @@ async function sendMessage(client: Client) {
         client.ws.send(messageToSend)
     }
 
-    if (client.ws instanceof Socket) {
+    if (client.ws instanceof Socket && client.event !== undefined) {
         client.ws.emit(client.event, messageToSend)
     }
 
