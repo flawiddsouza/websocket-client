@@ -63,7 +63,11 @@
                         v-if="!client.visibility || client.visibility === 'shown'"
                     >
                         <div class="d-f flex-ai-c p-0_5rem bc-primary">
-                            <select v-model="client.type" class="h-100p">
+                            <select
+                                v-model="client.type"
+                                class="h-100p"
+                                :disabled="client.ws ? true : false"
+                            >
                                 <option :value="undefined">WS</option>
                                 <option value="Socket.IO">IO</option>
                             </select>
