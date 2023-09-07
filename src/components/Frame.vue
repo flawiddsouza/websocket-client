@@ -292,6 +292,9 @@
     </Modal>
     <EnvironmentModal v-model:showModal="environmentModalShow" :project="clickedContextMenuProject" />
     <div class="context-menu" :style="{ top: showProjectContextMenuPopupCoords.y, left: showProjectContextMenuPopupCoords.x }" v-if="showProjectContextMenuPopup">
+        <div @click="duplicateProject">Duplicate</div>
+        <div @click="exportProject">Export</div>
+        <div @click="importProject">Import</div>
         <div @click="environmentProject">Environment</div>
         <div @click="renameProject">Rename</div>
         <div @click="deleteProject">Delete</div>
@@ -345,7 +348,7 @@ const sendInterceptorCode = ref('')
 const receiveInterceptorCode = ref('')
 const interceptorsStatus = ref('Enabled')
 const showSidebar = ref(true)
-const clickedContextMenuProject = ref({ id: '', name: '' })
+const clickedContextMenuProject: Ref<Project> = ref({ id: '', name: '' })
 const showProjectContextMenuPopup = ref(false)
 const showProjectContextMenuPopupCoords = ref({
     x: '',
@@ -376,6 +379,82 @@ function addProject() {
 function setSelectedProject(projectId: string) {
     selectedProjectId.value = projectId
     loadSavedClients(selectedProjectId.value)
+}
+
+function duplicateProject() {
+    const newProjectName = prompt('Enter new project name', clickedContextMenuProject.value.name)
+
+    if(!newProjectName || newProjectName.trim() === '') {
+        hideProjectContextMenu()
+        return
+    }
+
+    const newProject = {
+        id: generateId(),
+        name: newProjectName,
+        environment: clickedContextMenuProject.value.environment
+    }
+
+    projects.value.push(newProject)
+    localStorage.setItem(
+        localStorageKeys.clients + `-${newProject.id}`,
+        localStorage.getItem(localStorageKeys.clients + `-${clickedContextMenuProject.value.id}`) ?? ''
+    )
+    setSelectedProject(newProject.id)
+
+    hideProjectContextMenu()
+}
+
+function exportProject() {
+    const project = {
+        id: selectedProjectId.value,
+        name: clickedContextMenuProject.value.name,
+        environment: clickedContextMenuProject.value.environment,
+        clients: clients.value
+    }
+
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(project, null, 4))
+    const downloadAnchorNode = document.createElement('a')
+    downloadAnchorNode.setAttribute('href', dataStr)
+    downloadAnchorNode.setAttribute('download', `${project.name}.json`)
+    document.body.appendChild(downloadAnchorNode)
+    downloadAnchorNode.click()
+    downloadAnchorNode.remove()
+}
+
+function importProject() {
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.json'
+    fileInput.addEventListener('change', (event) => {
+        const file = (event.target as HTMLInputElement).files![0]
+        if(file) {
+            const reader = new FileReader()
+            reader.onload = (event) => {
+                const importedProject = JSON.parse(event.target!.result as string)
+                const project = {
+                    id: generateId(),
+                    name: importedProject.name,
+                    environment: importedProject.environment,
+                    clients: importedProject.clients
+                }
+                projects.value.push(project)
+                localStorage.setItem(
+                    localStorageKeys.clients + `-${project.id}`,
+                    JSON.stringify(
+                        importedProject.clients.map((item: Client) => ({
+                            ...item,
+                            ws: null
+                        }))
+                    )
+                )
+                setSelectedProject(project.id)
+            }
+            reader.readAsText(file)
+        }
+    })
+    fileInput.click()
+    hideProjectContextMenu()
 }
 
 function environmentProject() {
