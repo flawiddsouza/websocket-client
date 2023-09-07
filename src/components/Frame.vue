@@ -141,7 +141,12 @@
                                 v-model="client.message"
                                 @input="updateCurrentPayload(client, 'payload', ($event as any).target.value)"
                             ></textarea>
-                            <div class="align-right">
+                            <div class="d-f flex-jc-sb">
+                                <button
+                                    @click="beautifyJSON(client)"
+                                >
+                                    Beautify JSON
+                                </button>
                                 <button
                                     @click="sendMessage(client)"
                                     :disabled="client.ws === null"
@@ -541,6 +546,16 @@ function addClientMessage(client: Client, clientMessage: ClientMessage) {
 
     if (client.visibility !== 'hidden') {
         scrollToBottomClientMessages(client.id)
+    }
+}
+
+function beautifyJSON(client: Client) {
+    try {
+        const parsedMessage = JSON.parse(client.message)
+        client.message = JSON.stringify(parsedMessage, null, 4)
+        client.payloads.find(payload => payload.id === client.currentPayloadId)!.payload = client.message
+    } catch {
+        alert('Invalid JSON')
     }
 }
 
