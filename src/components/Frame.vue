@@ -763,6 +763,7 @@ function closePayloadTab(client: Client, event: { tabToClose: ClientPayload, tab
 
     if(event.tabToOpen) {
         client.currentPayloadId = event.tabToOpen.id
+        client.message = event.tabToOpen.payload
     }
 }
 
