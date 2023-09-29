@@ -52,7 +52,8 @@
                     </div>
                 </div>
                 <div>
-                    <button @click="startBackupRestore">Backup & Restore</button>
+                    <button @click="environmentProject(true)">Environment</button>
+                    <button @click="startBackupRestore" class="ml-1rem">Backup & Restore</button>
                     <button @click="addClient" class="ml-1rem">Add Client</button>
                 </div>
             </div>
@@ -295,7 +296,7 @@
         <div @click="duplicateProject">Duplicate</div>
         <div @click="exportProject">Export</div>
         <div @click="importProject">Import</div>
-        <div @click="environmentProject">Environment</div>
+        <div @click="environmentProject()">Environment</div>
         <div @click="renameProject">Rename</div>
         <div @click="deleteProject">Delete</div>
     </div>
@@ -457,9 +458,13 @@ function importProject() {
     hideProjectContextMenu()
 }
 
-function environmentProject() {
+function environmentProject(openedFromNavBar=false) {
     environmentModalShow.value = true
-    hideProjectContextMenu(false)
+    if(openedFromNavBar) {
+        clickedContextMenuProject.value = projects.value.find(project => project.id === selectedProjectId.value)!
+    } else {
+        hideProjectContextMenu(false)
+    }
 }
 
 function renameProject() {
