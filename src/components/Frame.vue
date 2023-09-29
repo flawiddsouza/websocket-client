@@ -649,6 +649,15 @@ async function sendMessage(client: Client) {
 
     let messageToSend = client.message
 
+    const environment = getEnvironment()
+    const possibleEnvironmentObjectPaths: string[] = getObjectPaths(environment)
+
+    possibleEnvironmentObjectPaths.forEach(objectPath => {
+        const objectPathValue = getObjectPathValue(environment, objectPath)
+        messageToSend = messageToSend.replace(`{{ _.${objectPath} }}`, objectPathValue)
+        messageToSend = messageToSend.replace(`{{${objectPath}}}`, objectPathValue)
+    })
+
     if (interceptorsStatus.value !== 'Disabled') {
         (window as any).getEnvironmentVariable = (objectPath: string) => {
             const environment = getEnvironment()
@@ -671,7 +680,7 @@ async function sendMessage(client: Client) {
         client.ws.emit(client.event, messageToSend)
     }
 
-    let clientMessageToSave = client.message
+    let clientMessageToSave = messageToSend
 
     if (client.ws instanceof Socket) {
         clientMessageToSave = `[${client.event}] ${clientMessageToSave}`
